@@ -47,7 +47,10 @@ def _run_pipeline(project_root: Path) -> dict:
         text=True,
         timeout=180,
     )
-    payload, _ = json.JSONDecoder().raw_decode(completed.stdout.lstrip())
+    json_start = completed.stdout.find('{\n  "run_id"')
+    if json_start < 0:
+        raise AssertionError(f"Pipeline JSON output not found:\n{completed.stdout}")
+    payload, _ = json.JSONDecoder().raw_decode(completed.stdout[json_start:])
     return payload
 
 
