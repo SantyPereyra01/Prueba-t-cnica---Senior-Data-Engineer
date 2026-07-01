@@ -1,0 +1,43 @@
+.venv/
+.uv-cache/
+.uv-python/
+.jdk/
+.downloads/
+.spark-tmp/
+.spark-jars/
+.hadoop/
+.pytest_cache/
+pytest-cache-files-*/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.coverage
+htmlcov/
+
+# Generated lakehouse data
+data/
+spark-warehouse/
+metastore_db/
+derby.log
+
+# Local QA/scratch artifacts
+.qa_docx/
+.tmp/
+
+# Internal review notes (not part of the public submission)
+docs/explicacion-para-claudio.md
+docs/revision-de-claudio-para-cody.md
+docs/revision-sr-hallazgos-y-plan.md
+
+# Original assessment bundle (clean input copies live under input/)
+Prueba_Tecnica_Senior_Data_Engineer*.docx
+global_mobility_data_entrega_productos (1).csv
+materials_catalog (1).csv
+pruebatcnicaseniordataengineer.zip
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

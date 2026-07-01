@@ -1,0 +1,9 @@
+environment: dev
+paths:
+  bronze: data/dev/bronze
+  silver: data/dev/silver
+  gold: data/dev/gold
+  quarantine_root: data/dev
+  quality_logs: data/dev/shared/quality_logs
+spark:
+  shuffle_partitions: 4

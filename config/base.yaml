@@ -1,0 +1,30 @@
+app:
+  name: saas-data-platform
+
+input:
+  deliveries: input/global_mobility_data_entrega_productos.csv
+  materials: input/materials_catalog.csv
+
+paths:
+  bronze: data/bronze
+  silver: data/silver
+  gold: data/gold
+  quarantine_root: data
+  quality_logs: data/shared/quality_logs
+
+execution:
+  start_date: "2025-01-01"
+  end_date: "2025-06-30"
+  tenant: all
+  fail_fast: false
+
+quality:
+  fail_on_critical: false
+
+spark:
+  master: "local[4]"
+  shuffle_partitions: 4
+  log_level: WARN
+
+tenants:
+  enabled: [sv, gt, hn, ec, jm, pe]
