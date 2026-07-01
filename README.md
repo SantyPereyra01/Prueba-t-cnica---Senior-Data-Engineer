@@ -1,6 +1,6 @@
 # SAAS Data Platform
 
-Implementación local y compatible con Databricks de un pipeline medallion multi-tenant para entregas de producto. Cada tenant se procesa y almacena de forma aislada; los controles de calidad se consolidan en una tabla Delta compartida.
+Implementación local, portable a Databricks, de un pipeline medallion multi-tenant para entregas de producto. Cada tenant se procesa y almacena de forma aislada; los controles de calidad se consolidan en una tabla Delta compartida.
 
 ## Arquitectura
 
@@ -54,6 +54,8 @@ uv run python scripts/bootstrap_windows_hadoop.py
 Los últimos dos comandos preparan el runtime local de Windows: descargan los JAR de Delta y los binarios Hadoop 3.3.6 que PySpark necesita para permisos del filesystem. Los binarios vienen del repositorio público [`cdarlint/winutils`](https://github.com/cdarlint/winutils), se verifican contra SHA-256 fijados y nunca se versionan. Linux y Databricks usan la resolución estándar de `delta-spark` y no requieren `winutils`.
 
 Los CSV entregados están versionados en `input/`. Los productos Delta se crean debajo de `data/` y están excluidos de Git.
+
+La ejecución validada en este repositorio usa rutas locales, tal como pide la simulación del challenge. En Databricks, el código reutiliza la SparkSession del runtime y los paths deben sobreescribirse con rutas gobernadas `/Volumes/...` o ubicaciones cloud definidas por la plataforma; no se fuerza el `master` local.
 
 ## Ejecución
 
