@@ -18,6 +18,22 @@ class GoldResult:
     records_written: int
 
 
+def aggregate_daily_metrics(facts):
+    """Aggregate valid Silver facts at the required Gold grain."""
+    return (
+        facts.groupBy("tenant_id", "fecha_proceso", "tipo_entrega")
+        .agg(
+            F.sum("cantidad_normalizada_st").alias("total_units"),
+            F.sum(F.col("cantidad_normalizada_st") * F.col("precio"))
+            .cast(DecimalType(38, 6))
+            .alias("total_revenue"),
+            F.countDistinct("ruta").alias("active_routes"),
+            F.countDistinct("transporte").alias("active_transports"),
+        )
+        .withColumn("_aggregation_timestamp", F.current_timestamp())
+    )
+
+
 def build_daily_metrics(
     spark: SparkSession, config: DictConfig, tenant: str
 ) -> GoldResult:
@@ -31,18 +47,7 @@ def build_daily_metrics(
             )
         )
     )
-    metrics = (
-        facts.groupBy("tenant_id", "fecha_proceso", "tipo_entrega")
-        .agg(
-            F.sum("cantidad_normalizada_st").alias("total_units"),
-            F.sum(F.col("cantidad_normalizada_st") * F.col("precio"))
-            .cast(DecimalType(38, 6))
-            .alias("total_revenue"),
-            F.countDistinct("ruta").alias("active_routes"),
-            F.countDistinct("transporte").alias("active_transports"),
-        )
-        .withColumn("_aggregation_timestamp", F.current_timestamp())
-    )
+    metrics = aggregate_daily_metrics(facts)
     count = metrics.count()
     overwrite_date_range(
         spark,

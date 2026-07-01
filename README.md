@@ -106,7 +106,8 @@ data/dev/shared/quality_logs/
 
 ```bash
 uv run ruff check .
-uv run pytest --cov=saas_pipeline
+uv run pytest --ignore=tests/integration --cov=saas_pipeline
+uv run pytest tests/integration
 ```
 
 Los checks Silver verifican cantidad positiva, tipos permitidos, enriquecimiento material, unicidad de la clave de negocio y consistencia básica SCD2. Todos se escriben en `quality_logs`. En QA y main, una falla crítica impide construir Gold.
