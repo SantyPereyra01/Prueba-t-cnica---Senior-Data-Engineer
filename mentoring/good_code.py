@@ -6,6 +6,19 @@ from dataclasses import dataclass
 
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
+from pyspark.sql.types import DoubleType, StringType, StructField, StructType
+
+DELIVERY_SCHEMA = StructType(
+    [
+        StructField("pais", StringType(), True),
+        StructField("fecha_proceso", StringType(), True),
+        StructField("tipo_entrega", StringType(), True),
+        StructField("material", StringType(), True),
+        StructField("precio", DoubleType(), True),
+        StructField("cantidad", DoubleType(), True),
+        StructField("unidad", StringType(), True),
+    ]
+)
 
 
 @dataclass(frozen=True)
@@ -43,7 +56,7 @@ def transform_deliveries(frame: DataFrame, config: DeliveryJobConfig) -> DataFra
 
 
 def process(spark: SparkSession, config: DeliveryJobConfig) -> DataFrame:
-    source = spark.read.option("header", True).option("inferSchema", True).csv(config.input_path)
+    source = spark.read.option("header", True).schema(DELIVERY_SCHEMA).csv(config.input_path)
     result = transform_deliveries(source, config)
     (
         result.write.format("delta")
