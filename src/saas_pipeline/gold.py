@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from omegaconf import DictConfig
-from pyspark.sql import SparkSession
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import DecimalType
 
@@ -18,7 +18,7 @@ class GoldResult:
     records_written: int
 
 
-def aggregate_daily_metrics(facts):
+def aggregate_daily_metrics(facts: DataFrame) -> DataFrame:
     """Aggregate valid Silver facts at the required Gold grain."""
     return (
         facts.groupBy("tenant_id", "fecha_proceso", "tipo_entrega")

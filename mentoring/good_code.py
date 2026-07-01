@@ -6,12 +6,14 @@ from dataclasses import dataclass
 
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
-from pyspark.sql.types import DoubleType, StringType, StructField, StructType
+from pyspark.sql.types import DoubleType, LongType, StringType, StructField, StructType
 
 DELIVERY_SCHEMA = StructType(
     [
         StructField("pais", StringType(), True),
         StructField("fecha_proceso", StringType(), True),
+        StructField("transporte", LongType(), True),
+        StructField("ruta", LongType(), True),
         StructField("tipo_entrega", StringType(), True),
         StructField("material", StringType(), True),
         StructField("precio", DoubleType(), True),

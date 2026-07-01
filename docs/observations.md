@@ -42,7 +42,13 @@ Estas observaciones no cambian el contrato de la prueba. Documentan decisiones q
 
 **Alternativa.** En un entorno regulado, priorizaría cuarentena sobre descarte para no ocultar problemas del origen. La precedencia debería formar parte de una matriz de reglas versionada.
 
-## 6. Evolución tecnológica (horizonte 2-3)
+## 6. Severidad y lectura de métricas de calidad
+
+`business_key_conflicts` se clasifica como `critical` porque dos payloads distintos con la misma clave vuelven ambiguo qué hecho debería llegar a Silver y Gold. A diferencia de una cantidad negativa o un material desconocido, no existe una corrección determinística por fila; el contrato de identidad de origen está roto.
+
+Esas filas también forman parte de `quarantined_records`, que mide el volumen total enviado a revisión. Ambas métricas son perspectivas superpuestas y no deben sumarse: una representa el total de cuarentena y la otra identifica su subconjunto crítico por conflicto de identidad.
+
+## 7. Evolución tecnológica (horizonte 2-3)
 
 Propondría tres mejoras después de estabilizar el batch:
 
