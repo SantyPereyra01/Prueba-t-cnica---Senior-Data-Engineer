@@ -18,7 +18,11 @@ from pyspark.sql.types import (
 )
 
 from saas_pipeline.paths import table_path
-from saas_pipeline.transformations import BUSINESS_KEY, VALID_DELIVERY_TYPES
+from saas_pipeline.transformations import (
+    BUSINESS_KEY,
+    VALID_DELIVERY_TYPES,
+    find_scd2_overlaps,
+)
 
 
 @dataclass(frozen=True)
@@ -66,6 +70,7 @@ def run_silver_checks(
     tenant: str,
     quarantined_records: int,
     discarded_records: int,
+    conflicting_key_records: int,
 ) -> list[QualityResult]:
     """Evaluate fact integrity and SCD2 invariants on persisted Silver tables."""
     fact = spark.read.format("delta").load(
@@ -93,6 +98,7 @@ def run_silver_checks(
         | F.col("valid_to").isNull()
         | (F.col("valid_from") > F.col("valid_to"))
     ).count()
+    overlapping_intervals = find_scd2_overlaps(dimensions).count()
     fact_count = fact.count()
 
     results = [
@@ -128,6 +134,18 @@ def run_silver_checks(
             "valid_material_intervals", "critical", dimensions.count(), invalid_intervals
         ),
         QualityResult(
+            "scd2_intervals_do_not_overlap",
+            "critical",
+            dimensions.count(),
+            overlapping_intervals,
+        ),
+        QualityResult(
+            "business_key_conflicts",
+            "critical",
+            fact_count + conflicting_key_records,
+            conflicting_key_records,
+        ),
+        QualityResult(
             "quarantined_records",
             "warning",
             fact_count + quarantined_records,
@@ -149,7 +167,11 @@ def persist_quality_results(
     results: list[QualityResult],
 ) -> None:
     executed_at = datetime.now(UTC)
-    dimension_checks = {"single_current_material_version", "valid_material_intervals"}
+    dimension_checks = {
+        "single_current_material_version",
+        "valid_material_intervals",
+        "scd2_intervals_do_not_overlap",
+    }
     rows = [
         (
             run_id,
