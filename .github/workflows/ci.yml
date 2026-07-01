@@ -26,4 +26,6 @@ jobs:
       - name: Lint
         run: uv run ruff check .
       - name: Unit tests
-        run: uv run pytest --cov=saas_pipeline --cov-report=term-missing
+        run: uv run pytest --ignore=tests/integration --cov=saas_pipeline --cov-report=term-missing
+      - name: Delta integration test
+        run: uv run pytest tests/integration

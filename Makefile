@@ -9,7 +9,8 @@ run:
 	uv run saas-pipeline run --env dev --tenant all --start-date 2025-01-01 --end-date 2025-06-30
 
 test:
-	uv run pytest
+	uv run pytest --ignore=tests/integration
+	uv run pytest tests/integration
 
 lint:
 	uv run ruff check .
