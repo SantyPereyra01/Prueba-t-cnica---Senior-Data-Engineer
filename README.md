@@ -94,7 +94,7 @@ La CLI devuelve código distinto de cero si algún tenant falla e imprime un res
 El aislamiento local está representado por rutas independientes:
 
 ```text
-data/dev/bronze/<tenant>/deliveries/fecha_proceso=YYYYMMDD/
+data/dev/bronze/<tenant>/deliveries/fecha_proceso=YYYYMMDD/_tenant_id=<tenant>/
 data/dev/silver/<tenant>/fact_deliveries/fecha_proceso=YYYY-MM-DD/
 data/dev/silver/<tenant>/dim_materials/
 data/dev/gold/<tenant>/daily_metrics_by_delivery_type/fecha_proceso=YYYY-MM-DD/

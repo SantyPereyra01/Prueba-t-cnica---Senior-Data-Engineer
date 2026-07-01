@@ -51,6 +51,7 @@ def run_tenant(
         tenant,
         silver.quarantined_records,
         silver.discarded_records,
+        silver.conflicting_key_records,
     )
     persist_quality_results(spark, config, run_id, batch_id, tenant, checks)
     if config.quality.fail_on_critical and has_critical_failure(checks):

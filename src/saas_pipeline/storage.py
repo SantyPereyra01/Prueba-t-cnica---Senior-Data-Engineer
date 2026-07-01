@@ -19,10 +19,17 @@ def overwrite_date_range(
     partition_column: str,
     start_value: str,
     end_value: str,
+    additional_partition_columns: Sequence[str] = (),
 ) -> None:
     """Atomically replace a date range, including removal of stale rows."""
     if not is_delta_table(spark, path):
-        frame.write.format("delta").mode("overwrite").partitionBy(partition_column).save(path)
+        partition_columns = [partition_column, *additional_partition_columns]
+        (
+            frame.write.format("delta")
+            .mode("overwrite")
+            .partitionBy(*partition_columns)
+            .save(path)
+        )
         return
 
     predicate = (

@@ -71,5 +71,6 @@ def ingest_bronze(
         "fecha_proceso",
         start_raw,
         end_raw,
+        additional_partition_columns=["_tenant_id"],
     )
     return BronzeResult(written, invalid_count)

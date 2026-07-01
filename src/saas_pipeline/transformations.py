@@ -5,6 +5,7 @@ from __future__ import annotations
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.types import DecimalType
+from pyspark.sql.window import Window
 
 from saas_pipeline.schemas import DELIVERY_SOURCE_COLUMNS
 
@@ -22,6 +23,11 @@ BUSINESS_KEY = [
 MONEY_TYPE = DecimalType(38, 18)
 
 
+def try_cast(column: str, data_type: str) -> F.Column:
+    """Cast malformed values to null consistently, including under ANSI mode."""
+    return F.expr(f"try_cast(`{column}` as {data_type})")
+
+
 def source_record_hash() -> F.Column:
     """Stable hash over source fields; nulls remain distinguishable from empty strings."""
     values = [F.coalesce(F.col(name), F.lit("<NULL>")) for name in DELIVERY_SOURCE_COLUMNS]
@@ -30,17 +36,18 @@ def source_record_hash() -> F.Column:
 
 def parse_process_date(column: str = "fecha_proceso") -> F.Column:
     raw = F.col(column)
-    return F.when(raw.rlike(r"^[0-9]{8}$"), F.to_date(raw, "yyyyMMdd"))
+    parsed = F.expr(f"try_to_timestamp(`{column}`, 'yyyyMMdd')").cast("date")
+    return F.when(raw.rlike(r"^[0-9]{8}$"), parsed)
 
 
 def normalize_deliveries(frame: DataFrame) -> DataFrame:
     """Type raw delivery fields and normalize all quantities to stock units (ST)."""
     typed = (
         frame.withColumn("fecha_proceso", parse_process_date())
-        .withColumn("transporte", F.col("transporte").cast("long"))
-        .withColumn("ruta", F.col("ruta").cast("long"))
-        .withColumn("precio", F.col("precio").cast(MONEY_TYPE))
-        .withColumn("cantidad", F.col("cantidad").cast(MONEY_TYPE))
+        .withColumn("transporte", try_cast("transporte", "bigint"))
+        .withColumn("ruta", try_cast("ruta", "bigint"))
+        .withColumn("precio", try_cast("precio", "decimal(38,18)"))
+        .withColumn("cantidad", try_cast("cantidad", "decimal(38,18)"))
         .withColumn("unidad", F.upper(F.trim(F.col("unidad"))))
         .withColumn("tipo_entrega", F.upper(F.trim(F.col("tipo_entrega"))))
         .withColumn("tenant_id", F.lower(F.col("_tenant_id")))
@@ -74,6 +81,24 @@ def attach_material_dimension(facts: DataFrame, dimensions: DataFrame) -> DataFr
     )
 
 
+def find_scd2_overlaps(dimensions: DataFrame) -> DataFrame:
+    """Return material versions whose start overlaps the previous inclusive interval."""
+    window = Window.partitionBy("material").orderBy("valid_from", "valid_to")
+    return (
+        dimensions.withColumn("_previous_valid_to", F.lag("valid_to").over(window))
+        .filter(
+            F.col("_previous_valid_to").isNotNull()
+            & (F.col("valid_from") <= F.col("_previous_valid_to"))
+        )
+        .drop("_previous_valid_to")
+    )
+
+
+def find_business_key_conflicts(frame: DataFrame) -> DataFrame:
+    """Return business keys represented by more than one distinct source payload."""
+    return frame.groupBy(*BUSINESS_KEY).count().filter(F.col("count") > 1).drop("count")
+
+
 def add_quarantine_reason(frame: DataFrame) -> DataFrame:
     """Classify all Silver anomalies into a single auditable reason field."""
     return frame.withColumn(
@@ -94,15 +119,31 @@ def add_quarantine_reason(frame: DataFrame) -> DataFrame:
 
 def split_silver_records(
     bronze: DataFrame, dimensions: DataFrame
-) -> tuple[DataFrame, DataFrame, DataFrame]:
-    """Return valid, quarantined and discarded records after Silver rules."""
+) -> tuple[DataFrame, DataFrame, DataFrame, DataFrame]:
+    """Return valid, quarantined, discarded and conflicting records."""
     deduplicated = bronze.dropDuplicates(DELIVERY_SOURCE_COLUMNS)
     normalized = normalize_deliveries(deduplicated)
     discarded = normalized.filter(~F.col("tipo_entrega").isin(*VALID_DELIVERY_TYPES)).withColumn(
         "_discard_reason", F.lit("unsupported_delivery_type")
     )
     candidates = normalized.filter(F.col("tipo_entrega").isin(*VALID_DELIVERY_TYPES))
-    classified = add_quarantine_reason(attach_material_dimension(candidates, dimensions))
-    quarantined = classified.filter(F.col("_quarantine_reason") != "")
+    conflicting_keys = find_business_key_conflicts(candidates)
+    conflicting_source = candidates.join(conflicting_keys, BUSINESS_KEY, "inner")
+    unique_source = candidates.join(conflicting_keys, BUSINESS_KEY, "left_anti")
+
+    classified = add_quarantine_reason(attach_material_dimension(unique_source, dimensions))
+    conflicting = add_quarantine_reason(
+        attach_material_dimension(conflicting_source, dimensions)
+    ).withColumn(
+        "_quarantine_reason",
+        F.concat_ws(
+            ";",
+            F.lit("conflicting_business_key"),
+            F.when(F.col("_quarantine_reason") != "", F.col("_quarantine_reason")),
+        ),
+    )
+    quarantined = classified.filter(F.col("_quarantine_reason") != "").unionByName(
+        conflicting
+    )
     valid = classified.filter(F.col("_quarantine_reason") == "").drop("_quarantine_reason")
-    return valid, quarantined, discarded
+    return valid, quarantined, discarded, conflicting
