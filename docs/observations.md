@@ -6,7 +6,7 @@ Estas observaciones no cambian el contrato de la prueba. Documentan decisiones q
 
 **Observación.** La arquitectura define simultáneamente una ruta física por tenant (`bronze/<tenant>/deliveries`) y particionado por `tenant_id`. Dentro de esa ruta, `tenant_id` tiene cardinalidad uno; crear otra carpeta `_tenant_id=sv` no aporta pruning y aumenta el número de particiones pequeñas.
 
-**Resolución aplicada.** El tenant se conserva como `_tenant_id`, pero la tabla local se particiona solo por `fecha_proceso`, siguiendo además el ejemplo de paths del enunciado.
+**Resolución aplicada.** Se implementan ambas columnas de partición (`fecha_proceso`, `_tenant_id`) para cumplir literalmente la arquitectura. Se conserva esta observación porque `_tenant_id` tiene cardinalidad uno dentro de cada ruta local por tenant y, por lo tanto, no agrega pruning efectivo.
 
 **Alternativa.** Si Bronze fuera una única tabla cross-tenant, sí la particionaría por `_tenant_id` y fecha. Esto simplificaría operaciones globales, pero reduciría el aislamiento físico y cambiaría el mapping uno-a-uno con schemas de Unity Catalog.
 
